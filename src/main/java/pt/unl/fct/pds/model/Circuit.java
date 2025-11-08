@@ -1,6 +1,5 @@
-package pt.unl.fct.pds.project2.model;
+package pt.unl.fct.pds.model;
 
-import pt.unl.fct.pds.project2.model.Node;
 import java.util.Arrays;
 
 

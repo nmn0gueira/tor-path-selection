@@ -6,7 +6,7 @@
   <packaging>jar</packaging>
   <version>1.0</version>
   <name>project2</name>
-  <url>http://maven.apache.org</url>
+  <url>https://maven.apache.org</url>
   <properties>
     <maven.compiler.source>8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
@@ -50,5 +50,12 @@
       <version>3.8.1</version>
       <scope>test</scope>
     </dependency>
+      <!-- https://mvnrepository.com/artifact/com.maxmind.geoip2/geoip2 -->
+      <dependency>
+          <groupId>com.maxmind.geoip2</groupId>
+          <artifactId>geoip2</artifactId>
+          <version>4.4.0</version>
+      </dependency>
   </dependencies>
+
 </project>
