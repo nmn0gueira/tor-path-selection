@@ -22,5 +22,9 @@ public class Project2
 
         ConsensusParser parser = new ConsensusParser(DEFAULT_FILE);
         List<Node> nodes = parser.parseConsensus();
+
+        for (Node node : nodes) {
+            System.out.println(node.toString());
+        }
     }
 }
