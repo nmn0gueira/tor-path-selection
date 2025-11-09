@@ -1,7 +1,7 @@
 package pt.unl.fct.pds.model;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
+import java.util.Set;
 
 public class Node {
     private String nickname;
@@ -10,7 +10,7 @@ public class Node {
     private String ipAddress;
     private int orPort;
     private int dirPort;
-    private String[] flags;
+    private Set<String> flags;
     private String version;
     private int bandwidth;
     private String country;
@@ -18,6 +18,7 @@ public class Node {
 
     public Node() {}
 
+    // IMPORTANT: Flags are passed by reference and not copied.
     public Node(
                 String nickname,
                 String fingerprint,
@@ -25,7 +26,7 @@ public class Node {
                 String ipAddress,
                 int orPort,
                 int dirPort,
-                String[] flags,
+                Set<String> flags,
                 String version,
                 int bandwidth,
                 String country,
@@ -37,7 +38,7 @@ public class Node {
         this.ipAddress = ipAddress;
         this.orPort = orPort;
         this.dirPort = dirPort;
-        this.flags = Arrays.copyOf(flags, flags.length);
+        this.flags = flags;
         this.version = version;
         this.bandwidth = bandwidth;
         this.country = country;
@@ -50,7 +51,7 @@ public class Node {
     public String getIpAddress() {return ipAddress;}
     public int getOrPort() {return orPort;}
     public int getDirPort() {return dirPort;}
-    public String[] getFlags() {return flags;}
+    public Set<String> getFlags() {return flags;}
     public String getVersion() {return version;}
     public int getBandwidth() {return bandwidth;}
     public String getCountry() {return country;}
@@ -63,7 +64,7 @@ public class Node {
     public void setIpAddress(String ipAddress) {this.ipAddress = ipAddress;}
     public void setOrPort(int orPort) {this.orPort = orPort;}
     public void setDirPort(int dirPort) {this.dirPort = dirPort;}
-    public void setFlags(String[] flags) {this.flags = Arrays.copyOf(flags, flags.length);}
+    public void setFlags(Set<String> flags) { this.flags = flags;}
     public void setVersion(String version) {this.version = version;}
     public void setBandwidth(int bandwidth) {this.bandwidth = bandwidth;}
     public void setCountry(String country) {this.country = country;}
@@ -78,7 +79,7 @@ public class Node {
                 ", ipAddress='" + ipAddress + '\'' +
                 ", orPort=" + orPort +
                 ", dirPort=" + dirPort +
-                ", flags=" + Arrays.toString(flags) +
+                ", flags=" + flags +
                 ", version='" + version + '\'' +
                 ", bandwidth=" + bandwidth +
                 ", country='" + country + '\'' +

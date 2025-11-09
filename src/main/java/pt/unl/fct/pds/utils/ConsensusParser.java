@@ -5,8 +5,12 @@ import pt.unl.fct.pds.model.Node;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+
 
 public class ConsensusParser {
     String filename;
@@ -57,14 +61,14 @@ public class ConsensusParser {
             if (line.startsWith("a "))  // skip IPv6 address line if it exists (we do not use it)
                 line = reader.readLine();
 
-            String[] flags = line.substring(2).split(" ");
+            Set<String> flags = new HashSet<>(Arrays.asList(line.substring(2).split(" ")));
             line = reader.readLine();
             String version = line.substring(2);
             reader.readLine();  // Skip pr
             line = reader.readLine();
             int bandwidth = Integer.parseInt(line.split(" ")[1].split("=")[1]); // Split bandwidth line, then grab the second part and split on the equal sign to grab the value
             line = reader.readLine();   // p
-            String policy =  line.substring(2);
+            String policy = line.substring(2);
             line = reader.readLine();
 
             String country = gl.locateCountry(ipAddress);
