@@ -8,16 +8,21 @@ import com.maxmind.geoip2.model.CountryResponse;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Helper class to geolocate nodes based on IP address.
  * It can use a portable local database for fast lookups.
- * It may be wise to implement a way to make request to a REST API if the local database does not return a valid answer.
+ * It may be wise to implement a way to make request to a web API if the local database does not return a valid answer.
  */
 public class GeoLookup {
     private final DatabaseReader reader;
 
     private static final String DEFAULT_DB = "GeoLite2-Country.mmdb";
+
+    private final Map<String, String> knownMissingIPs;
+
 
     public GeoLookup(String dbPath) {
         File database = new File("geo/" + dbPath);
@@ -26,6 +31,9 @@ public class GeoLookup {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        knownMissingIPs = new HashMap<>();
+        // Literally the only IP missing from DB in the current consensus. Discovered using https://www.iplocation.net/ip-lookup
+        knownMissingIPs.put("73.170.126.220", "United States");
     }
     /*
     public GeoLookup() {
@@ -59,14 +67,9 @@ public class GeoLookup {
         try {
             InetAddress address = InetAddress.getByName(ip);
             CountryResponse response = reader.country(address);
-
             return response.getCountry().getName();
         } catch (IOException | GeoIp2Exception e) {
-            // This is a stupid fix for the project.
-            if (ip.equals("73.170.126.220")) {
-                return "United States"; // Literally the only IP missing from DB in the example consensus. Discovered using https://www.iplocation.net/ip-lookup
-            }
-            throw new RuntimeException(e);
+            return knownMissingIPs.getOrDefault(ip, "Unknown");
         }
     }
 }

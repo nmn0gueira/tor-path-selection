@@ -6,6 +6,7 @@ import java.util.Set;
 public class Node {
     private String nickname;
     private String fingerprint;
+    private String descriptorDigest;
     private LocalDateTime timePublished;
     private String ipAddress;
     private int orPort;
@@ -15,6 +16,7 @@ public class Node {
     private int bandwidth;
     private String country;
     private String exitPolicy;
+    private String family;
 
     public Node() {}
 
@@ -22,6 +24,7 @@ public class Node {
     public Node(
                 String nickname,
                 String fingerprint,
+                String descriptorDigest,
                 LocalDateTime timePublished,
                 String ipAddress,
                 int orPort,
@@ -30,10 +33,12 @@ public class Node {
                 String version,
                 int bandwidth,
                 String country,
-                String exitPolicy)
+                String exitPolicy,
+                String family)
     {
         this.nickname = nickname;
         this.fingerprint = fingerprint;
+        this.descriptorDigest = descriptorDigest;
         this.timePublished = timePublished;
         this.ipAddress = ipAddress;
         this.orPort = orPort;
@@ -43,10 +48,12 @@ public class Node {
         this.bandwidth = bandwidth;
         this.country = country;
         this.exitPolicy = exitPolicy;
+        this.family = family;
     }
 
     public String getNickname() {return nickname;}
     public String getFingerprint() {return fingerprint;}
+    public String getDescriptorDigest() {return descriptorDigest;}
     public LocalDateTime getTimePublished() {return timePublished;}
     public String getIpAddress() {return ipAddress;}
     public int getOrPort() {return orPort;}
@@ -56,10 +63,12 @@ public class Node {
     public int getBandwidth() {return bandwidth;}
     public String getCountry() {return country;}
     public String getExitPolicy() {return exitPolicy;}
+    public String getFamily() {return family;}
 
     
     public void setNickname(String nickname) {this.nickname = nickname;}
     public void setFingerprint(String fingerprint) {this.fingerprint = fingerprint;}
+    public void setDescriptorDigest(String descriptorDigest) {this.descriptorDigest = descriptorDigest;}
     public void setTimePublished(LocalDateTime timePublished) {this.timePublished =timePublished;}
     public void setIpAddress(String ipAddress) {this.ipAddress = ipAddress;}
     public void setOrPort(int orPort) {this.orPort = orPort;}
@@ -69,21 +78,5 @@ public class Node {
     public void setBandwidth(int bandwidth) {this.bandwidth = bandwidth;}
     public void setCountry(String country) {this.country = country;}
     public void setExitPolicy(String exitPolicy) {this.exitPolicy = exitPolicy;}
-
-    @Override
-    public String toString() {
-        return "Node{" +
-                "nickname='" + nickname + '\'' +
-                ", fingerprint='" + fingerprint + '\'' +
-                ", timePublished=" + timePublished +
-                ", ipAddress='" + ipAddress + '\'' +
-                ", orPort=" + orPort +
-                ", dirPort=" + dirPort +
-                ", flags=" + flags +
-                ", version='" + version + '\'' +
-                ", bandwidth=" + bandwidth +
-                ", country='" + country + '\'' +
-                ", exitPolicy='" + exitPolicy + '\'' +
-                '}';
-    }
+    public void setFamily(String family) {this.family = family;}
 }

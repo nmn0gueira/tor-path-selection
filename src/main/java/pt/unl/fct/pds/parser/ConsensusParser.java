@@ -1,15 +1,15 @@
-package pt.unl.fct.pds.utils;
+package pt.unl.fct.pds.parser;
 
+
+import org.torproject.descriptor.ServerDescriptor;
 import pt.unl.fct.pds.model.Node;
+import pt.unl.fct.pds.utils.GeoLookup;
+import pt.unl.fct.pds.utils.HexUtils;
 
 import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 
 public class ConsensusParser {
@@ -22,7 +22,7 @@ public class ConsensusParser {
     public void setFilename(String filename) {this.filename = filename;}
 
     /*
-    r <NodeNickname> <Fingerprint> <Digest> <PublicationTime> <IP Address> <ORPort> <DIRPort>
+    r <NodeNickname> <Fingerprint> <DescriptorDigest> <PublicationTime> <IP Address> <ORPort> <DIRPort>
     a <IPv6 address>:<port> (this line is optional)
     s <Flags> (1 or more, options listed below)
     v <VersionNumber>
@@ -30,7 +30,7 @@ public class ConsensusParser {
     w Bandwidth=<Bandwidth>
     p <ExitPolicy>
      */
-    public List<Node> parseConsensus() throws IOException {
+    public List<Node> parseConsensus(Map<String, ServerDescriptor> serverDescriptors) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(filename));
 
         String line;
@@ -44,11 +44,13 @@ public class ConsensusParser {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         GeoLookup gl = new GeoLookup();
         List<Node> nodes = new LinkedList<>();
+        //Map<String, ServerDescriptor> serverDescriptors = DescriptorUtils.getDescriptors();
 
         while (line != null && line.startsWith("r ")) {
             String[] split = line.split(" ");
             String nickname = split[1];
-            String fingerprint = split[2];
+            String fingerprint = HexUtils.toHex(Base64.getDecoder().decode(split[2])).toUpperCase();  // Store in hex string instead of base64
+            String descriptorDigest = HexUtils.toHex(Base64.getDecoder().decode(split[3])).toLowerCase();  // Store in hex string instead of base64
             String dateString = split[4];
             String timeString = split[5];
             String ipAddress = split[6];
@@ -72,9 +74,26 @@ public class ConsensusParser {
             line = reader.readLine();
 
             String country = gl.locateCountry(ipAddress);
+
+            ServerDescriptor serverDescriptor = serverDescriptors.get(fingerprint);
+            if (serverDescriptor == null) {
+                System.out.println("Missing key: " + fingerprint);
+                continue;
+            }
+            Set<String> families = new HashSet<>();
+            List<String> familyEntries = serverDescriptor.getFamilyEntries();
+            //System.out.println(nickname + " family entries (if existing:");
+            if (familyEntries != null && !familyEntries.isEmpty()) {
+                for (String familyEntry : familyEntries) {
+                    if (!familyEntry.startsWith("$"))
+                        System.out.println("Weird entry: " + familyEntry);
+                }
+            }
+
             nodes.add(new Node(
                     nickname,
                     fingerprint,
+                    descriptorDigest,
                     dateTime,
                     ipAddress,
                     orPort,
@@ -83,7 +102,8 @@ public class ConsensusParser {
                     version,
                     bandwidth,
                     country,
-                    policy
+                    policy,
+                    null
             ));
         }
 
