@@ -1,7 +1,6 @@
 package pt.unl.fct.pds.parser;
 
 
-import org.torproject.descriptor.ServerDescriptor;
 import pt.unl.fct.pds.model.Node;
 import pt.unl.fct.pds.utils.GeoLookup;
 import pt.unl.fct.pds.utils.HexUtils;
@@ -30,7 +29,7 @@ public class ConsensusParser {
     w Bandwidth=<Bandwidth>
     p <ExitPolicy>
      */
-    public List<Node> parseConsensus(Map<String, ServerDescriptor> serverDescriptors) throws IOException {
+    public List<Node> parseConsensus(Map<String, Set<String>> nodeFamilies) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(filename));
 
         String line;
@@ -44,7 +43,6 @@ public class ConsensusParser {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         GeoLookup gl = new GeoLookup();
         List<Node> nodes = new LinkedList<>();
-        //Map<String, ServerDescriptor> serverDescriptors = DescriptorUtils.getDescriptors();
 
         while (line != null && line.startsWith("r ")) {
             String[] split = line.split(" ");
@@ -75,19 +73,9 @@ public class ConsensusParser {
 
             String country = gl.locateCountry(ipAddress);
 
-            ServerDescriptor serverDescriptor = serverDescriptors.get(fingerprint);
-            if (serverDescriptor == null) {
-                System.out.println("Missing key: " + fingerprint);
-                continue;
-            }
-            Set<String> families = new HashSet<>();
-            List<String> familyEntries = serverDescriptor.getFamilyEntries();
-            //System.out.println(nickname + " family entries (if existing:");
-            if (familyEntries != null && !familyEntries.isEmpty()) {
-                for (String familyEntry : familyEntries) {
-                    if (!familyEntry.startsWith("$"))
-                        System.out.println("Weird entry: " + familyEntry);
-                }
+            Set<String> familyEntries = nodeFamilies.get(fingerprint);
+            if (familyEntries == null) {
+                throw new RuntimeException("Descriptor not found for node with fingerprint " + fingerprint + ".");
             }
 
             nodes.add(new Node(
@@ -103,7 +91,7 @@ public class ConsensusParser {
                     bandwidth,
                     country,
                     policy,
-                    null
+                    familyEntries
             ));
         }
 

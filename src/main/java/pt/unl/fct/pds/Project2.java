@@ -1,6 +1,5 @@
 package pt.unl.fct.pds;
 
-import org.torproject.descriptor.ServerDescriptor;
 import pt.unl.fct.pds.model.Node;
 import pt.unl.fct.pds.parser.ConsensusParser;
 import pt.unl.fct.pds.parser.ServerDescriptorParser;
@@ -13,6 +12,7 @@ import java.nio.file.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static pt.unl.fct.pds.utils.NetworkUtils.download;
 
@@ -57,9 +57,9 @@ public class Project2
         System.out.println("Welcome to the Circuit Simulator!");
 
         ServerDescriptorParser serverDescriptorParser = new ServerDescriptorParser(serverDescriptorsFile);
-        Map<String, ServerDescriptor>  serverDescriptorMap = serverDescriptorParser.parseServerDescriptors();
+        Map<String, Set<String>>  nodeFamilies = serverDescriptorParser.parseServerDescriptors();
         ConsensusParser consensusParser = new ConsensusParser(consensusFile);
-        List<Node> nodes = consensusParser.parseConsensus(serverDescriptorMap);
+        List<Node> nodes = consensusParser.parseConsensus(nodeFamilies);
 
 
         // TODO: Implement different modes of execution from here on (tor, weighted, both?). Metrics can be ran by default and we do a run for each line in the traffic destinations

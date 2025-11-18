@@ -13,14 +13,22 @@ public class TorPathSelection extends AbstractPathSelection{
         id = 1;
     }
 
+
+    /**
+     * From <a href="https://spec.torproject.org/path-spec/path-selection-constraints.html?highlight=family#family-membership">...</a> (...) two relays belong to the same family if each relay lists the other relay in its family list.
+     * @param exitNode
+     * @return
+     */
     @Override
     public Node getGuardNode(Node exitNode) {
         RandomCollection<Node> suitableNodes = new RandomCollection<>();
-        for  (Node node : nodes) {
+        for (Node node : nodes) {
             if (!node.getFlags().contains("Guard"))
                 continue;
-
-            // TODO: Also filter nodes of the same family
+            // If both nodes list each other in their family entries (either by fingerprint or nickname)
+            if ((node.getFamily().contains(exitNode.getFingerprint()) || node.getFamily().contains(exitNode.getNickname()) &&
+                    (exitNode.getFamily().contains(node.getFingerprint()) || exitNode.getFamily().contains(node.getNickname()))))
+                continue;
             if (NetworkUtils.same16Subnet(node.getIpAddress(), exitNode.getIpAddress()))
                 continue;
 
@@ -33,14 +41,20 @@ public class TorPathSelection extends AbstractPathSelection{
     @Override
     public Node getMiddleNode(Node guardNode, Node exitNode) {
         RandomCollection<Node> suitableNodes = new RandomCollection<>();
-        for  (Node node : nodes) {
+        for (Node node : nodes) {
             if (!node.getFlags().contains("Fast"))
                 continue;
-            // TODO: Also filter nodes of the same family
+            // If both nodes list each other in their family entries (either by fingerprint or nickname)
+            if ((node.getFamily().contains(exitNode.getFingerprint()) || node.getFamily().contains(exitNode.getNickname()) &&
+                    (exitNode.getFamily().contains(node.getFingerprint()) || exitNode.getFamily().contains(node.getNickname()))))
+                continue;
             if (NetworkUtils.same16Subnet(node.getIpAddress(), exitNode.getIpAddress()))
                 continue;
 
-            assert !NetworkUtils.same16Subnet(node.getIpAddress(), guardNode.getIpAddress());   // This check should be be needed by transitivity so we assert instead
+            // These check should not be needed by transitivity so we assert instead
+            assert !NetworkUtils.same16Subnet(node.getIpAddress(), guardNode.getIpAddress());
+            assert !(node.getFamily().contains(guardNode.getFingerprint()) || node.getFamily().contains(guardNode.getNickname()) &&
+                    (guardNode.getFamily().contains(node.getFingerprint()) || guardNode.getFamily().contains(node.getNickname())));
 
             suitableNodes.add(node.getBandwidth(), node);
         }
