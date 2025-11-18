@@ -21,7 +21,7 @@ public class Circuit {
     public Circuit(int id, Node[] nodes) {
         this.id = id;
         this.nodes = Arrays.copyOf(nodes, nodes.length);
-        int minBandwidth = nodes[0].getBandwidth();
+        this.minBandwidth = nodes[0].getBandwidth();
         for (int i = 1; i < nodes.length; i++){
             if  (nodes[i].getBandwidth() < minBandwidth){
                 minBandwidth = nodes[i].getBandwidth();

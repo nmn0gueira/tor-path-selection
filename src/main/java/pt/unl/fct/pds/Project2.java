@@ -1,5 +1,6 @@
 package pt.unl.fct.pds;
 
+import pt.unl.fct.pds.model.Circuit;
 import pt.unl.fct.pds.model.Node;
 import pt.unl.fct.pds.parser.ConsensusParser;
 import pt.unl.fct.pds.parser.ServerDescriptorParser;
@@ -57,14 +58,18 @@ public class Project2
         System.out.println("Welcome to the Circuit Simulator!");
 
         ServerDescriptorParser serverDescriptorParser = new ServerDescriptorParser(serverDescriptorsFile);
-        Map<String, Set<String>>  nodeFamilies = serverDescriptorParser.parseServerDescriptors();
+        Map<String, Set<String>> nodeFamilies = serverDescriptorParser.parseServerDescriptors();
         ConsensusParser consensusParser = new ConsensusParser(consensusFile);
         List<Node> nodes = consensusParser.parseConsensus(nodeFamilies);
 
 
         // TODO: Implement different modes of execution from here on (tor, weighted, both?). Metrics can be ran by default and we do a run for each line in the traffic destinations
         PathSelection torPathSelection = new TorPathSelection(nodes);
-        //Circuit circuit = torPathSelection.buildCircuit();
+        Circuit circuit = torPathSelection.buildCircuit(22);   // Replace this with actual port
+        for (Node node : circuit.getNodes()) {
+            System.out.println(node);
+        }
+        System.out.println("Circuit min bw: " + circuit.getMinBandwidth());
     }
 
 

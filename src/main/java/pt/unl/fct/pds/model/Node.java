@@ -79,4 +79,23 @@ public class Node {
     public void setCountry(String country) {this.country = country;}
     public void setExitPolicy(String exitPolicy) {this.exitPolicy = exitPolicy;}
     public void setFamily(Set<String> family) {this.family = family;}
+
+    @Override
+    public String toString() {
+        return "Node{" +
+                "nickname='" + nickname + '\'' +
+                ", fingerprint='" + fingerprint + '\'' +
+                ", descriptorDigest='" + descriptorDigest + '\'' +
+                ", timePublished=" + timePublished +
+                ", ipAddress='" + ipAddress + '\'' +
+                ", orPort=" + orPort +
+                ", dirPort=" + dirPort +
+                ", flags=" + flags +
+                ", version='" + version + '\'' +
+                ", bandwidth=" + bandwidth +
+                ", country='" + country + '\'' +
+                ", exitPolicy='" + exitPolicy + '\'' +
+                ", family=" + family +
+                '}';
+    }
 }
