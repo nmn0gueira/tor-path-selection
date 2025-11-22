@@ -1,9 +1,10 @@
 package pt.unl.fct.pds.model;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Set;
 
-public class Node {
+public class Node implements Serializable {
     private String nickname;
     private String fingerprint;
     private String descriptorDigest;

@@ -13,16 +13,15 @@ public class TorPathSelection extends AbstractPathSelection{
         id = 1;
     }
 
-
     /**
      * From <a href="https://spec.torproject.org/path-spec/path-selection-constraints.html?highlight=family#family-membership">...</a> (...) two relays belong to the same family if each relay lists the other relay in its family list.
-     * @param exitNode
-     * @return
+     * @param exitNode previous exit node
+     * @return sampled guard node
      */
     @Override
     public Node getGuardNode(Node exitNode) {
         RandomCollection<Node> suitableNodes = new RandomCollection<>();
-        for (Node node : nodes) {
+        for (Node node : guardSet) {
             if (!node.getFlags().contains("Guard"))
                 continue;
             // If both nodes list each other in their family entries (either by fingerprint or nickname)
@@ -31,8 +30,6 @@ public class TorPathSelection extends AbstractPathSelection{
                 continue;
             if (NetworkUtils.same16Subnet(node.getIpAddress(), exitNode.getIpAddress()))
                 continue;
-
-            // TODO: Prioritize relays from persistent SAMPLED_GUARDS and CONFIRMED_GUARDS sets ??????
             suitableNodes.add(node.getBandwidth(), node);
         }
         return suitableNodes.next();

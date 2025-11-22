@@ -6,8 +6,8 @@ import pt.unl.fct.pds.parser.ConsensusParser;
 import pt.unl.fct.pds.parser.ServerDescriptorParser;
 import pt.unl.fct.pds.path.PathSelection;
 import pt.unl.fct.pds.path.TorPathSelection;
+import pt.unl.fct.pds.utils.Cache;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.HashMap;
@@ -30,8 +30,8 @@ public class Project2
             "45.66.35.11"
     };
 
-    private static final String CACHED_CONSENSUS = "cache/consensus";
-    private static final String CACHED_SV_DESCRIPTORS = "cache/sv_descriptors";
+    private static final Path CACHED_CONSENSUS = Cache.getCachePath("consensus");
+    private static final Path CACHED_SV_DESCRIPTORS = Cache.getCachePath("sv_descriptors");
     private static final String DEFAULT_TRAFFIC = "example/traffic";
 
     public static void main(String[] args) throws IOException {
@@ -42,14 +42,14 @@ public class Project2
         }
         String consensusFile = argMap.get("--consensus");
         if (consensusFile == null) {
-            consensusFile = CACHED_CONSENSUS;
-            if (!(new File(CACHED_CONSENSUS).exists()))
+            consensusFile = CACHED_CONSENSUS.toString();
+            if (!Files.exists(CACHED_CONSENSUS))
                 downloadConsensus();
         }
         String serverDescriptorsFile = argMap.get("--server-descriptors");
         if (serverDescriptorsFile == null) {
-            serverDescriptorsFile = CACHED_SV_DESCRIPTORS;
-            if (!(new File(CACHED_SV_DESCRIPTORS).exists()))
+            serverDescriptorsFile = CACHED_SV_DESCRIPTORS.toString();
+            if (!Files.exists(CACHED_SV_DESCRIPTORS))
                 downloadServerDescriptors();
         }
 
@@ -78,7 +78,7 @@ public class Project2
             try {
                 download(
                         "http://" + da + "/tor/status-vote/current/consensus",
-                        Paths.get(CACHED_CONSENSUS),
+                        CACHED_CONSENSUS,
                         true,
                         bytes -> {
                             System.out.printf("Downloading consensus (%f MB)...\r", bytes * 1.0/(1024 * 1024));
@@ -96,7 +96,7 @@ public class Project2
             try {
                 download(
                         "http://" + da + "/tor/server/all",
-                        Paths.get(CACHED_SV_DESCRIPTORS),
+                        CACHED_SV_DESCRIPTORS,
                         true,
                         bytes -> {
                             System.out.printf("Downloading server descriptors (%f MB)...\r", bytes * 1.0/(1024 * 1024));
