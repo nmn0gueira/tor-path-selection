@@ -67,7 +67,7 @@ public class GeoLookup {
         try {
             InetAddress address = InetAddress.getByName(ip);
             CountryResponse response = reader.country(address);
-            return response.getCountry().getName();
+            return response.getRegisteredCountry().getName();
         } catch (IOException | GeoIp2Exception e) {
             return knownMissingIPs.getOrDefault(ip, "Unknown");
         }

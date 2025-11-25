@@ -65,20 +65,17 @@ public class Project2 {
         TrafficParser trafficParser = new TrafficParser(trafficFile);
         List<Integer> ports = trafficParser.parseTrafficFile();
 
-
         String mode = argMap.getOrDefault("--mode", "both"); // tor | weighted | both
         int runs = Integer.parseInt(argMap.getOrDefault("--runs", "1"));
         double alpha = Double.parseDouble(argMap.getOrDefault("--alpha", "0.5"));
         double beta = Double.parseDouble(argMap.getOrDefault("--beta", "0.5"));        
 
         if (mode.equals("tor") || mode.equals("both")) {
-
             PathSelection torPathSelection = new TorPathSelection(nodes);
             System.out.println("Running TorPathSelection metrics...");
             runMetrics("TorPathSelection", torPathSelection, ports, runs);
         }
         if (mode.equals("weighted") || mode.equals("both")) {
-
             PathSelection weightedPathSelection = new WeightedPathSelection(nodes, alpha, beta);
             System.out.println("Running WeightedPathSelection metrics (alpha=" + alpha + ", beta=" + beta + ")...");
             runMetrics("WeightedPathSelection", weightedPathSelection, ports, runs);
@@ -92,8 +89,9 @@ public class Project2 {
         int guardEqualsExit = 0;
 
         for (int r = 0; r < runs; r++) {
-            for (int port : ports) {
-                System.out.printf("%s: run %d/%d, port %d\r", name, r + 1, runs, port);
+            for (int i = 0; i < ports.size(); i++) {
+                int port = ports.get(i);
+                System.out.printf("Port (%d) (%d/%d)...\r", port, i, ports.size());
                 Circuit c = ps.buildCircuit(port);
                 total++;
                 minBws.add(c.getMinBandwidth());
