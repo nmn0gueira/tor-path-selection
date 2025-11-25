@@ -48,25 +48,10 @@ public class NetworkUtils {
                 if (progressCallback != null) {
                     progressCallback.accept(total);
                 }
-
             }
         } finally {
             connection.disconnect();
         }
         Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-    }
-
-    // TODO: Maybe add a method for extracting 16 subnet and then just use equals upstream. Reduces number of splits if one of the arguments in the function below never changes
-    /**
-     *
-     * @param ipAddress - IPv4 address in string format
-     * @param otherIpAddress - IPv4 address in string format
-     * @return true if both are in the same /16 subnet, false otherwise
-     */
-    public static boolean same16Subnet(String ipAddress, String otherIpAddress) {
-        String[] splitIpGuard = ipAddress.split("\\.");
-        String[] splitIpExit = otherIpAddress.split("\\.");
-        assert splitIpGuard.length == splitIpExit.length && splitIpGuard.length == 4;
-        return splitIpExit[0].equals(splitIpGuard[0]) && splitIpExit[1].equals(splitIpGuard[1]);
     }
 }

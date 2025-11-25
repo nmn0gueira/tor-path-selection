@@ -30,7 +30,7 @@ public abstract class AbstractPathSelection implements PathSelection {
                 continue;
             if (!node.getFlags().contains("Fast"))
                 continue;
-            if (!satisfiesPolicy(destinationPort, node.getExitPolicy()))
+            if (!node.satisfiesPolicy(destinationPort))
                 continue;
             suitableNodes.add(node.getBandwidth(), node);
         }
@@ -82,46 +82,5 @@ public abstract class AbstractPathSelection implements PathSelection {
         Node middleNode = getMiddleNode(guardNode, exitNode);
         Node[] circuitNodes = new Node[]{guardNode, middleNode, exitNode};
         return new Circuit(id, circuitNodes);
-    }
-
-    /**
-     * This snippet below may seem confusing. The policy satisfaction logic is the same for if a policy is permissive or restrictive except for the values returned when breaking the loop. When finding a value explicitly accepted (restrictive policy) true is returned, while the opposite is true for finding a value explicitly rejected in a permissive policy
-     * @param destinationPort Required port for outgoing traffic
-     * @param exitPolicy Exit policy of a node (format: <accept|reject> <ports>)
-     * @return true if policy is satisfied, false otherwise
-     */
-    public boolean satisfiesPolicy(int destinationPort, String exitPolicy) {
-        String[] policySplit = exitPolicy.split(" ");
-        assert policySplit.length == 2;
-        String[] policyPorts = policySplit[1].split(",");
-
-        boolean acceptOrReject;
-        switch (policySplit[0]) {
-            case "accept":
-                acceptOrReject = true;
-                break;
-            case "reject":
-                acceptOrReject = false;
-                break;
-            default:
-                throw new IllegalArgumentException("Invalid policy type: " + policyPorts[0]);
-        }
-
-        for (String policyPort : policyPorts) {
-            String[] portSplit = policyPort.split("-");
-            if (portSplit.length == 1) { // If it is not a range
-                if (destinationPort == Integer.parseInt(portSplit[0]))
-                    return acceptOrReject;
-            }
-            else if (portSplit.length == 2) { // If it is a range
-                if (destinationPort >= Integer.parseInt(portSplit[0]) && destinationPort <= Integer.parseInt(portSplit[1]))
-                    return acceptOrReject;
-            }
-            else {
-                throw new RuntimeException("Unexpected exception");
-            }
-
-        }
-        return !acceptOrReject;
     }
 }
