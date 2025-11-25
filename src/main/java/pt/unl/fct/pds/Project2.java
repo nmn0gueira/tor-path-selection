@@ -13,9 +13,11 @@ import pt.unl.fct.pds.utils.Cache;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashSet;
 
 import static pt.unl.fct.pds.utils.NetworkUtils.download;
 
@@ -54,7 +56,7 @@ public class Project2 {
                 downloadServerDescriptors();
         }
 
-        String trafficFile = argMap.get("--traffic");
+        String trafficFile = argMap.getOrDefault("--traffic", DEFAULT_TRAFFIC);
 
         System.out.println("Welcome to the Circuit Simulator!");
 
@@ -86,23 +88,35 @@ public class Project2 {
     }
 
     private static void runMetrics(String name, PathSelection ps, List<Integer> ports, int runs) {
-        java.util.List<Integer> minBws = new java.util.ArrayList<>();
+
+        Set<String> uniqueNodes = new HashSet<>();
+        Set<String> guardSet = new HashSet<>();
+        Set<String> middleSet = new HashSet<>();
+        Set<String> exitSet = new HashSet<>();
+
         int total = 0;
-        int sameCountryCount = 0;
-        int guardEqualsExit = 0;
 
         for (int r = 0; r < runs; r++) {
             for (int port : ports) {
                 System.out.printf("%s: run %d/%d, port %d\r", name, r + 1, runs, port);
                 Circuit c = ps.buildCircuit(port);
                 total++;
-                minBws.add(c.getMinBandwidth());
-                String guardCountry = c.getNodes()[0].getCountry();
-                String exitCountry = c.getNodes()[2].getCountry();
-                if (guardCountry != null && guardCountry.equals(exitCountry))
-                    sameCountryCount++;
-                if (c.getNodes()[0].getFingerprint().equals(c.getNodes()[2].getFingerprint()))
-                    guardEqualsExit++;
+                try {
+                    Node[] nodesArr = c.getNodes();
+                    if (nodesArr != null) {
+                        for (Node n : nodesArr) {
+                            if (n != null && n.getFingerprint() != null)
+                                uniqueNodes.add(n.getFingerprint());
+                        }
+                        if (nodesArr.length > 0 && nodesArr[0] != null && nodesArr[0].getFingerprint() != null)
+                            guardSet.add(nodesArr[0].getFingerprint());
+                        if (nodesArr.length > 1 && nodesArr[1] != null && nodesArr[1].getFingerprint() != null)
+                            middleSet.add(nodesArr[1].getFingerprint());
+                        if (nodesArr.length > 2 && nodesArr[2] != null && nodesArr[2].getFingerprint() != null)
+                            exitSet.add(nodesArr[2].getFingerprint());
+                    }
+                } catch (Exception ignored) {
+                }
             }
         }
 
@@ -111,26 +125,12 @@ public class Project2 {
             return;
         }
 
-        double avg = minBws.stream().mapToInt(Integer::intValue).average().orElse(0.0);
-        int min = minBws.stream().mapToInt(Integer::intValue).min().orElse(0);
-        int max = minBws.stream().mapToInt(Integer::intValue).max().orElse(0);
-        java.util.Collections.sort(minBws);
-        double median;
-        int mid = minBws.size() / 2;
-        if (minBws.size() % 2 == 0)
-            median = (minBws.get(mid - 1) + minBws.get(mid)) / 2.0;
-        else
-            median = minBws.get(mid);
-
         System.out.println("--- Metrics for " + name + " ---");
         System.out.println("Runs: " + runs + ", Ports tested: " + ports.size() + ", Total circuits: " + total);
-        System.out.println("MinBW avg: " + String.format("%.2f", avg) + " (min=" + min + ", max=" + max + ", median="
-                + median + ")");
-        System.out.println("Guard and Exit same country: " + sameCountryCount + " ("
-                + String.format("%.2f", 100.0 * sameCountryCount / total) + "%)");
-        System.out.println("Guard equals Exit (same fingerprint): " + guardEqualsExit + " ("
-                + String.format("%.2f", 100.0 * guardEqualsExit / total) + "%)");
+        System.out.println("Unique nodes chosen (total): " + uniqueNodes.size());
+        System.out.println("Unique per-position: guards=" + guardSet.size() + ", middle=" + middleSet.size() + ", exit=" + exitSet.size());
         System.out.println();
+
     }
 
     private static void downloadConsensus() {
