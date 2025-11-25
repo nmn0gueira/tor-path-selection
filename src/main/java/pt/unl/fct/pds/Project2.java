@@ -13,11 +13,9 @@ import pt.unl.fct.pds.utils.Cache;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.HashMap;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
 
 import static pt.unl.fct.pds.utils.NetworkUtils.download;
 
@@ -70,7 +68,7 @@ public class Project2 {
         String mode = argMap.getOrDefault("--mode", "both"); // tor | weighted | both
         int runs = Integer.parseInt(argMap.getOrDefault("--runs", "1"));
         double alpha = Double.parseDouble(argMap.getOrDefault("--alpha", "0.5"));
-        double beta = Double.parseDouble(argMap.getOrDefault("--beta", "0.5"));        
+        double beta = Double.parseDouble(argMap.getOrDefault("--beta", "0.5"));
 
         if (mode.equals("tor") || mode.equals("both")) {
             PathSelection torPathSelection = new TorPathSelection(nodes);
@@ -86,49 +84,72 @@ public class Project2 {
 
     private static void runMetrics(String name, PathSelection ps, List<Integer> ports, int runs) {
 
-        Set<String> uniqueNodes = new HashSet<>();
-        Set<String> guardSet = new HashSet<>();
-        Set<String> middleSet = new HashSet<>();
-        Set<String> exitSet = new HashSet<>();
+        Map<String, Integer> globalCounts = new HashMap<>();
+        Map<String, Integer> guardCounts = new HashMap<>();
+        Map<String, Integer> middleCounts = new HashMap<>();
+        Map<String, Integer> exitCounts = new HashMap<>();
 
-        int total = 0;
+        int nmCircuits = 0; // number of successfully built circuits
 
         for (int r = 0; r < runs; r++) {
             for (int i = 0; i < ports.size(); i++) {
                 int port = ports.get(i);
-                System.out.printf("Port (%d) (%d/%d)...\r", port, i, ports.size());
+                System.out.printf("Port (%d) (%d/%d)...\r", port, i + 1, ports.size());
                 Circuit c = ps.buildCircuit(port);
-                total++;
-                try {
-                    Node[] nodesArr = c.getNodes();
-                    if (nodesArr != null) {
-                        for (Node n : nodesArr) {
-                            if (n != null && n.getFingerprint() != null)
-                                uniqueNodes.add(n.getFingerprint());
+                nmCircuits++;
+                Node[] nodesArr = c.getNodes();
+                if (nodesArr != null) {
+                    for (int pos = 0; pos < nodesArr.length; pos++) {
+                        Node n = nodesArr[pos];
+                        if (n == null || n.getFingerprint() == null)
+                            continue;
+                        String fp = n.getFingerprint();
+                        globalCounts.put(fp, globalCounts.getOrDefault(fp, 0) + 1);
+                        if (pos == 0) {
+                            guardCounts.put(fp, guardCounts.getOrDefault(fp, 0) + 1);
+                        } else if (pos == 1) {
+                            middleCounts.put(fp, middleCounts.getOrDefault(fp, 0) + 1);
+                        } else if (pos == 2) {
+                            exitCounts.put(fp, exitCounts.getOrDefault(fp, 0) + 1);
                         }
-                        if (nodesArr.length > 0 && nodesArr[0] != null && nodesArr[0].getFingerprint() != null)
-                            guardSet.add(nodesArr[0].getFingerprint());
-                        if (nodesArr.length > 1 && nodesArr[1] != null && nodesArr[1].getFingerprint() != null)
-                            middleSet.add(nodesArr[1].getFingerprint());
-                        if (nodesArr.length > 2 && nodesArr[2] != null && nodesArr[2].getFingerprint() != null)
-                            exitSet.add(nodesArr[2].getFingerprint());
                     }
-                } catch (Exception ignored) {
                 }
             }
         }
 
-        if (total == 0) {
+        if (nmCircuits == 0) {
             System.out.println(name + ": no successful circuits generated.");
             return;
         }
+       
+
+        double globalEntropy = computeShannonEntropy(globalCounts, nmCircuits * 3);
+        double guardEntropy = computeShannonEntropy(guardCounts, nmCircuits);
+        double middleEntropy = computeShannonEntropy(middleCounts, nmCircuits);
+        double exitEntropy = computeShannonEntropy(exitCounts, nmCircuits);
 
         System.out.println("--- Metrics for " + name + " ---");
-        System.out.println("Runs: " + runs + ", Ports tested: " + ports.size() + ", Total circuits: " + total);
-        System.out.println("Unique nodes chosen (total): " + uniqueNodes.size());
-        System.out.println("Unique per-position: guards=" + guardSet.size() + ", middle=" + middleSet.size() + ", exit=" + exitSet.size());
+        System.out.println("Runs: " + runs + ", Ports tested: " + ports.size() + ", Total circuits: " + nmCircuits);
+        System.out.println("Unique nodes chosen (total): " + globalCounts.size());
+        System.out.println("Unique per-position: guards=" + guardCounts.size() + ", middle=" + middleCounts.size()
+                + ", exit=" + exitCounts.size());
+        System.out.printf("Shannon Entropy (global): %.6f\n", globalEntropy);
+        System.out.printf("Shannon Entropy (guard/middle/exit): %.6f / %.6f / %.6f\n", guardEntropy, middleEntropy,
+                exitEntropy);
         System.out.println();
+    }
 
+    private static double computeShannonEntropy(Map<String, Integer> counts, int totalSelections) {
+        if (counts == null || counts.isEmpty() || totalSelections <= 0)
+            return 0.0;
+        double entropy = 0.0;
+        for (int freq : counts.values()) {
+            if (freq <= 0)
+                continue;
+            double p = (double) freq / (double) totalSelections;
+            entropy -= p * (Math.log(p) / Math.log(2));
+        }
+        return entropy;
     }
 
     private static void downloadConsensus() {
