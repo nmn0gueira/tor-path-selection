@@ -7,6 +7,7 @@ import pt.unl.fct.pds.parser.ServerDescriptorParser;
 import pt.unl.fct.pds.path.PathSelection;
 import pt.unl.fct.pds.path.TorPathSelection;
 import pt.unl.fct.pds.path.WeightedPathSelection;
+import pt.unl.fct.pds.parser.TrafficParser;
 import pt.unl.fct.pds.utils.Cache;
 
 import java.io.IOException;
@@ -61,46 +62,17 @@ public class Project2 {
         Map<String, Set<String>> nodeFamilies = serverDescriptorParser.parseServerDescriptors();
         ConsensusParser consensusParser = new ConsensusParser(consensusFile);
         List<Node> nodes = consensusParser.parseConsensus(nodeFamilies);
+        TrafficParser trafficParser = new TrafficParser(trafficFile);
+        List<Integer> ports = trafficParser.parseTrafficFile();
+
 
         String mode = argMap.getOrDefault("--mode", "both"); // tor | weighted | both
         int runs = Integer.parseInt(argMap.getOrDefault("--runs", "1"));
         double alpha = Double.parseDouble(argMap.getOrDefault("--alpha", "0.5"));
-        double beta = Double.parseDouble(argMap.getOrDefault("--beta", "0.5"));
-
-        List<Integer> ports = new java.util.ArrayList<>();
-        if (trafficFile == null) {
-            ports.add(80);
-            ports.add(443);
-            ports.add(22);
-        } else {
-            java.nio.file.Path tf = Paths.get(trafficFile);
-            List<String> lines = Files.readAllLines(tf);
-            for (String line : lines) {
-                line = line.trim();
-                if (line.isEmpty() || line.startsWith("#"))
-                    continue;
-                // Accept formats: <port> or host:port
-                try {
-                    if (line.contains(":")) {
-                        String[] parts = line.split(":");
-                        ports.add(Integer.parseInt(parts[parts.length - 1]));
-                    } else {
-                        ports.add(Integer.parseInt(line));
-                    }
-                } catch (NumberFormatException e) {
-                    System.err.println("Warning: could not parse traffic line '" + line + "'. Skipping.");
-                }
-            }
-            if (ports.isEmpty()) {
-                System.out.println("No valid ports found in traffic file; using defaults.");
-                ports.add(80);
-                ports.add(443);
-                ports.add(22);
-            }
-        }
+        double beta = Double.parseDouble(argMap.getOrDefault("--beta", "0.5"));        
 
         if (mode.equals("tor") || mode.equals("both")) {
-            
+
             PathSelection torPathSelection = new TorPathSelection(nodes);
             System.out.println("Running TorPathSelection metrics...");
             runMetrics("TorPathSelection", torPathSelection, ports, runs);
@@ -121,19 +93,16 @@ public class Project2 {
 
         for (int r = 0; r < runs; r++) {
             for (int port : ports) {
-                try {
-                    Circuit c = ps.buildCircuit(port);
-                    total++;
-                    minBws.add(c.getMinBandwidth());
-                    String guardCountry = c.getNodes()[0].getCountry();
-                    String exitCountry = c.getNodes()[2].getCountry();
-                    if (guardCountry != null && guardCountry.equals(exitCountry))
-                        sameCountryCount++;
-                    if (c.getNodes()[0].getFingerprint().equals(c.getNodes()[2].getFingerprint()))
-                        guardEqualsExit++;
-                } catch (RuntimeException e) {
-                    System.err.println("Warning: failed to build circuit for port " + port + ": " + e.getMessage());
-                }
+                System.out.printf("%s: run %d/%d, port %d\r", name, r + 1, runs, port);
+                Circuit c = ps.buildCircuit(port);
+                total++;
+                minBws.add(c.getMinBandwidth());
+                String guardCountry = c.getNodes()[0].getCountry();
+                String exitCountry = c.getNodes()[2].getCountry();
+                if (guardCountry != null && guardCountry.equals(exitCountry))
+                    sameCountryCount++;
+                if (c.getNodes()[0].getFingerprint().equals(c.getNodes()[2].getFingerprint()))
+                    guardEqualsExit++;
             }
         }
 
