@@ -6,6 +6,7 @@ import pt.unl.fct.pds.parser.ConsensusParser;
 import pt.unl.fct.pds.parser.ServerDescriptorParser;
 import pt.unl.fct.pds.path.PathSelection;
 import pt.unl.fct.pds.path.TorPathSelection;
+import pt.unl.fct.pds.path.WeightedPathSelection;
 import pt.unl.fct.pds.utils.Cache;
 
 import java.io.IOException;
@@ -21,9 +22,8 @@ import static pt.unl.fct.pds.utils.NetworkUtils.download;
  * Application for Tor Path Selection alternatives.
  *
  */
-public class Project2 
-{
-    private static final String[] knownDirectoryAuthorities = new String[]{
+public class Project2 {
+    private static final String[] knownDirectoryAuthorities = new String[] {
             "217.196.147.77",
             "171.25.193.9:443",
             "216.218.219.41",
@@ -62,16 +62,107 @@ public class Project2
         ConsensusParser consensusParser = new ConsensusParser(consensusFile);
         List<Node> nodes = consensusParser.parseConsensus(nodeFamilies);
 
+        String mode = argMap.getOrDefault("--mode", "both"); // tor | weighted | both
+        int runs = Integer.parseInt(argMap.getOrDefault("--runs", "1"));
+        double alpha = Double.parseDouble(argMap.getOrDefault("--alpha", "0.5"));
+        double beta = Double.parseDouble(argMap.getOrDefault("--beta", "0.5"));
 
-        // TODO: Implement different modes of execution from here on (tor, weighted, both?). Metrics can be ran by default and we do a run for each line in the traffic destinations
-        PathSelection torPathSelection = new TorPathSelection(nodes);
-        Circuit circuit = torPathSelection.buildCircuit(22);   // Replace this with actual port
-        for (Node node : circuit.getNodes()) {
-            System.out.println(node);
+        List<Integer> ports = new java.util.ArrayList<>();
+        if (trafficFile == null) {
+            ports.add(80);
+            ports.add(443);
+            ports.add(22);
+        } else {
+            java.nio.file.Path tf = Paths.get(trafficFile);
+            List<String> lines = Files.readAllLines(tf);
+            for (String line : lines) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#"))
+                    continue;
+                // Accept formats: <port> or host:port
+                try {
+                    if (line.contains(":")) {
+                        String[] parts = line.split(":");
+                        ports.add(Integer.parseInt(parts[parts.length - 1]));
+                    } else {
+                        ports.add(Integer.parseInt(line));
+                    }
+                } catch (NumberFormatException e) {
+                    System.err.println("Warning: could not parse traffic line '" + line + "'. Skipping.");
+                }
+            }
+            if (ports.isEmpty()) {
+                System.out.println("No valid ports found in traffic file; using defaults.");
+                ports.add(80);
+                ports.add(443);
+                ports.add(22);
+            }
         }
-        System.out.println("Circuit min bw: " + circuit.getMinBandwidth());
+
+        if (mode.equals("tor") || mode.equals("both")) {
+            
+            PathSelection torPathSelection = new TorPathSelection(nodes);
+            System.out.println("Running TorPathSelection metrics...");
+            runMetrics("TorPathSelection", torPathSelection, ports, runs);
+        }
+        if (mode.equals("weighted") || mode.equals("both")) {
+
+            PathSelection weightedPathSelection = new WeightedPathSelection(nodes, alpha, beta);
+            System.out.println("Running WeightedPathSelection metrics (alpha=" + alpha + ", beta=" + beta + ")...");
+            runMetrics("WeightedPathSelection", weightedPathSelection, ports, runs);
+        }
     }
 
+    private static void runMetrics(String name, PathSelection ps, List<Integer> ports, int runs) {
+        java.util.List<Integer> minBws = new java.util.ArrayList<>();
+        int total = 0;
+        int sameCountryCount = 0;
+        int guardEqualsExit = 0;
+
+        for (int r = 0; r < runs; r++) {
+            for (int port : ports) {
+                try {
+                    Circuit c = ps.buildCircuit(port);
+                    total++;
+                    minBws.add(c.getMinBandwidth());
+                    String guardCountry = c.getNodes()[0].getCountry();
+                    String exitCountry = c.getNodes()[2].getCountry();
+                    if (guardCountry != null && guardCountry.equals(exitCountry))
+                        sameCountryCount++;
+                    if (c.getNodes()[0].getFingerprint().equals(c.getNodes()[2].getFingerprint()))
+                        guardEqualsExit++;
+                } catch (RuntimeException e) {
+                    System.err.println("Warning: failed to build circuit for port " + port + ": " + e.getMessage());
+                }
+            }
+        }
+
+        if (total == 0) {
+            System.out.println(name + ": no successful circuits generated.");
+            return;
+        }
+
+        double avg = minBws.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+        int min = minBws.stream().mapToInt(Integer::intValue).min().orElse(0);
+        int max = minBws.stream().mapToInt(Integer::intValue).max().orElse(0);
+        java.util.Collections.sort(minBws);
+        double median;
+        int mid = minBws.size() / 2;
+        if (minBws.size() % 2 == 0)
+            median = (minBws.get(mid - 1) + minBws.get(mid)) / 2.0;
+        else
+            median = minBws.get(mid);
+
+        System.out.println("--- Metrics for " + name + " ---");
+        System.out.println("Runs: " + runs + ", Ports tested: " + ports.size() + ", Total circuits: " + total);
+        System.out.println("MinBW avg: " + String.format("%.2f", avg) + " (min=" + min + ", max=" + max + ", median="
+                + median + ")");
+        System.out.println("Guard and Exit same country: " + sameCountryCount + " ("
+                + String.format("%.2f", 100.0 * sameCountryCount / total) + "%)");
+        System.out.println("Guard equals Exit (same fingerprint): " + guardEqualsExit + " ("
+                + String.format("%.2f", 100.0 * guardEqualsExit / total) + "%)");
+        System.out.println();
+    }
 
     private static void downloadConsensus() {
         for (String da : knownDirectoryAuthorities) {
@@ -81,7 +172,7 @@ public class Project2
                         CACHED_CONSENSUS,
                         true,
                         bytes -> {
-                            System.out.printf("Downloading consensus (%f MB)...\r", bytes * 1.0/(1024 * 1024));
+                            System.out.printf("Downloading consensus (%f MB)...\r", bytes * 1.0 / (1024 * 1024));
                         });
                 return;
             } catch (IOException ignored) {
@@ -99,7 +190,8 @@ public class Project2
                         CACHED_SV_DESCRIPTORS,
                         true,
                         bytes -> {
-                            System.out.printf("Downloading server descriptors (%f MB)...\r", bytes * 1.0/(1024 * 1024));
+                            System.out.printf("Downloading server descriptors (%f MB)...\r",
+                                    bytes * 1.0 / (1024 * 1024));
                         });
                 return;
             } catch (IOException ignored) {
