@@ -20,6 +20,11 @@ public class ConsensusParser {
     public String getFilename() {return filename;}
     public void setFilename(String filename) {this.filename = filename;}
 
+
+    public List<Node> parseConsensus(Map<String, Set<String>> nodeFamilies) throws IOException {
+        return parseConsensus(nodeFamilies, new FileReader(filename));
+    }
+
     /*
     r <NodeNickname> <Fingerprint> <DescriptorDigest> <PublicationTime> <IP Address> <ORPort> <DIRPort>
     a <IPv6 address>:<port> (this line is optional)
@@ -29,8 +34,8 @@ public class ConsensusParser {
     w Bandwidth=<Bandwidth>
     p <ExitPolicy>
      */
-    public List<Node> parseConsensus(Map<String, Set<String>> nodeFamilies) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(filename));
+    public List<Node> parseConsensus(Map<String, Set<String>> nodeFamilies, InputStreamReader inputStreamReader) throws IOException {
+        BufferedReader reader = new BufferedReader(inputStreamReader);
 
         String line;
         while ((line = reader.readLine()) != null && !line.startsWith("r ")) { // Pass lines ahead until we see one starting with 'r '. That is the start of the nodes
@@ -77,7 +82,6 @@ public class ConsensusParser {
             if (familyEntries == null) {
                 throw new RuntimeException("Descriptor not found for node with fingerprint " + fingerprint + ".");
             }
-
             nodes.add(new Node(
                     nickname,
                     fingerprint,
