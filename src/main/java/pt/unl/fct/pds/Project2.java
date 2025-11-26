@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collections;
 
 import static pt.unl.fct.pds.utils.NetworkUtils.download;
 
@@ -84,6 +86,8 @@ public class Project2 {
 
     private static void runMetrics(String name, PathSelection ps, List<Integer> ports, int runs) {
 
+        List<Integer> minBws = new ArrayList<>(ports.size() * runs);
+
         Map<String, Integer> globalCounts = new HashMap<>();
         Map<String, Integer> guardCounts = new HashMap<>();
         Map<String, Integer> middleCounts = new HashMap<>();
@@ -97,6 +101,7 @@ public class Project2 {
                 System.out.printf("Port (%d) (%d/%d)...\r", port, i + 1, ports.size());
                 Circuit c = ps.buildCircuit(port);
                 nmCircuits++;
+                minBws.add(c.getMinBandwidth());
                 Node[] nodesArr = c.getNodes();
                 if (nodesArr != null) {
                     for (int pos = 0; pos < nodesArr.length; pos++) {
@@ -121,7 +126,17 @@ public class Project2 {
             System.out.println(name + ": no successful circuits generated.");
             return;
         }
-       
+
+        double avg = minBws.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+        int min = minBws.stream().mapToInt(Integer::intValue).min().orElse(0);
+        int max = minBws.stream().mapToInt(Integer::intValue).max().orElse(0);
+        Collections.sort(minBws);
+        double median;
+        int mid = minBws.size() / 2;
+        if (minBws.size() % 2 == 0)
+            median = (minBws.get(mid - 1) + minBws.get(mid)) / 2.0;
+        else
+            median = minBws.get(mid);
 
         double globalEntropy = computeShannonEntropy(globalCounts, nmCircuits * 3);
         double guardEntropy = computeShannonEntropy(guardCounts, nmCircuits);
@@ -136,6 +151,8 @@ public class Project2 {
         System.out.printf("Shannon Entropy (global): %.6f\n", globalEntropy);
         System.out.printf("Shannon Entropy (guard/middle/exit): %.6f / %.6f / %.6f\n", guardEntropy, middleEntropy,
                 exitEntropy);
+        System.out.println("MinBW avg: " + String.format("%.2f", avg) + " (min=" + min + ", max=" + max + ", median="
+                + median + ")");
         System.out.println();
     }
 
