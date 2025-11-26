@@ -73,18 +73,44 @@ public class PathSelectionTest
     private void assertCircuit(Circuit circuit, int port) {
         assertNotNull(circuit);
         Node[] circuitNodes = circuit.getNodes();
-        Node exitNode = circuitNodes[circuitNodes.length - 1];
         Node guardNode = circuitNodes[0];
-        assertTrue(exitNode.satisfiesPolicy(port));
-        assertNotSameFamily(circuitNodes);
-        assertNotSame16Subnet(circuitNodes);
+        Node middleNode = circuitNodes[1];
+        Node exitNode = circuitNodes[circuitNodes.length - 1];
+        assertExitPolicy(exitNode, port);
+
         assertExitFlags(exitNode);
         assertGuardFlags(guardNode);
-        // TODO: Missing some verifications still
+        assertMiddleFlags(middleNode);
+
+        assertAllDifferent(circuitNodes);
+        assertNotSameFamily(circuitNodes);
+        assertNotSame16Subnet(circuitNodes);
     }
 
-    private void assertGuardFlags(Node guardNode) {
-        assertNotNull(guardNode);
+    // TODO: Missing unit tests for guard set
+
+    private void assertAllDifferent(Node[] nodes) {
+        assertNotNull(nodes);
+        for (int i = 0; i < nodes.length - 1; i++) {
+            for (int j = i + 1; j < nodes.length; j++) {
+                assertNotSame(nodes[i], nodes[j]);
+            }
+        }
+    }
+
+    private void assertGuardFlags(Node guard) {
+        assertNotNull(guard);
+        assertTrue(guard.getFlags().contains("Running") && guard.getFlags().contains("Guard"));
+    }
+
+    private void assertMiddleFlags(Node middle) {
+        assertNotNull(middle);
+        assertTrue(middle.getFlags().contains("Fast"));
+    }
+
+    private void assertExitPolicy(Node exit, int port) {
+        assertNotNull(exit);
+        assertTrue(exit.satisfiesPolicy(port));
     }
 
     private void assertExitFlags(Node exit) {
@@ -111,7 +137,7 @@ public class PathSelectionTest
     }
 
     private void testPathSelection(PathSelection pathSelection) {
-        List<Integer> ports = new ArrayList<>(65535);    // Fill with all ports
+        List<Integer> ports = new ArrayList<>(65535);
         for (int i = 0; i < 65535; i++) {
             ports.add(i);
         }

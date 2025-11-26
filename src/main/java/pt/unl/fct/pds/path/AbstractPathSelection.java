@@ -9,7 +9,9 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public abstract class AbstractPathSelection implements PathSelection {
 
@@ -60,9 +62,17 @@ public abstract class AbstractPathSelection implements PathSelection {
                     continue;
                 suitableNodes.add(node.getBandwidth(), node);
             }
-            for (int i = 0; i < guardSet.length; i++) {
-                guardSet[i] = suitableNodes.next(); // TODO: Should probably guarantee that the nodes we get here are all different (should be unlikely to happen tho)
+
+            assert suitableNodes.size() >= 3;
+            Set<Node> seen = new HashSet<>();
+            int idx = 0;
+            while (idx < guardSet.length) {
+                Node candidate = suitableNodes.next();
+                if (seen.add(candidate)) {
+                    guardSet[idx++] = candidate;
+                }
             }
+            
             try (ObjectOutputStream out = new ObjectOutputStream(Files.newOutputStream(CACHED_GUARD_SET,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING,

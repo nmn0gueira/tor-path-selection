@@ -7,8 +7,8 @@ import java.util.List;
 
 public class WeightedPathSelection extends AbstractPathSelection {
 
-    private double alpha;
-    private double beta;
+    private final double alpha;
+    private final double beta;
 
     public WeightedPathSelection(List<Node> nodes, double alpha, double beta) {
         super(nodes);
@@ -18,10 +18,10 @@ public class WeightedPathSelection extends AbstractPathSelection {
     }
 
     @Override
-    public Node getGuardNode(Node exitNode) {
+    protected Node getGuardNode(Node exitNode) {
         RandomCollection<Node> rc = new RandomCollection<>();
         for (Node node : guardSet) {
-            if (node == null)
+            if (node == null || node == exitNode)   // Using == here is intentional
                 continue;
             if (!node.getFlags().contains("Guard"))
                 continue;
@@ -41,10 +41,10 @@ public class WeightedPathSelection extends AbstractPathSelection {
     }
 
     @Override
-    public Node getMiddleNode(Node guardNode, Node exitNode) {
+    protected Node getMiddleNode(Node guardNode, Node exitNode) {
         RandomCollection<Node> rc = new RandomCollection<>();
         for (Node node : nodes) {
-            if (node == null)
+            if (node == null || node == guardNode || node == exitNode) // Using == here is intentional
                 continue;
             if (!node.getFlags().contains("Fast"))
                 continue;
