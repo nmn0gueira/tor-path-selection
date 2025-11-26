@@ -2,11 +2,9 @@ package pt.unl.fct.pds.parser;
 
 import java.io.*;
 import java.util.*;
-import java.util.logging.Logger;
 
 public class ServerDescriptorParser {
-    String filename;
-    private static final Logger logger = Logger.getLogger(ServerDescriptorParser.class.getName());
+    private String filename;
 
     public ServerDescriptorParser() {}
     public ServerDescriptorParser(String filename) {this.filename = filename;}
@@ -18,32 +16,29 @@ public class ServerDescriptorParser {
     We only care about the fingerprint and family
      */
     public Map<String, Set<String>> parseServerDescriptors() throws IOException {
-        long startCheckpoint = System.currentTimeMillis();
-        logger.info("Parsing server descriptors...");
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            Map<String, Set<String>> familyByFingerprint = new HashMap<>();
+            String line = reader.readLine();
+            String fingerprint = null;
 
-        BufferedReader reader = new BufferedReader(new FileReader(filename));
-        Map<String, Set<String>> familyByFingerprint = new HashMap<>();
-        String line = reader.readLine();
-        String fingerprint = null;
-
-        while (line != null) {
-            if (line.startsWith("fingerprint ")) {
-                String[] fingerprintParts = line.split(" ");
-                StringBuilder sb = new StringBuilder();
-                for (int i = 1; i < fingerprintParts.length; i++) {
-                    sb.append(fingerprintParts[i]);
+            while (line != null) {
+                if (line.startsWith("fingerprint ")) {
+                    String[] fingerprintParts = line.split(" ");
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 1; i < fingerprintParts.length; i++) {
+                        sb.append(fingerprintParts[i]);
+                    }
+                    fingerprint = sb.toString();
+                    familyByFingerprint.put(fingerprint, new HashSet<>());
                 }
-                fingerprint = sb.toString();
-                familyByFingerprint.put(fingerprint, new HashSet<>());
+                if (line.startsWith("family ")) {
+                    Set<String> familySet = getFamilySet(line);
+                    familyByFingerprint.put(fingerprint, familySet);
+                }
+                line = reader.readLine();
             }
-            if (line.startsWith("family ")) {
-                Set<String> familySet = getFamilySet(line);
-                familyByFingerprint.put(fingerprint, familySet);
-            }
-            line = reader.readLine();
+            return familyByFingerprint;
         }
-        logger.info("Done. Took " + (System.currentTimeMillis() - startCheckpoint) + " milliseconds");
-        return familyByFingerprint;
     }
 
     /*
