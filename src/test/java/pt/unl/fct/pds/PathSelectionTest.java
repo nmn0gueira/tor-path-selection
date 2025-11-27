@@ -142,13 +142,7 @@ public class PathSelectionTest
         assertNotNull(nodes);
         for (int i = 0; i < nodes.length - 1; i++) {
             for (int j = i + 1; j < nodes.length; j++) {
-                try {
-                    assertFalse(nodes[i].isInSameFamily(nodes[j]));
-                } catch (AssertionFailedError e) {
-                    System.out.println("Node " + nodes[i] + " is in same family");
-                    System.out.println("Node " + nodes[j] + " is in same family");
-                    throw new RuntimeException(e);
-                }
+                assertFalse(nodes[i].isInSameFamily(nodes[j]));
             }
         }
     }
@@ -164,7 +158,7 @@ public class PathSelectionTest
 
     private void testPathSelection(PathSelection pathSelection, Node[] guardSet) {
         List<Integer> ports = new ArrayList<>(65535);
-        for (int i = 0; i < 65535; i++) {
+        for (int i = 1; i < 65536; i++) {
             ports.add(i);
         }
         Set<Node> guardHashSet = new HashSet<>(Arrays.asList(guardSet));

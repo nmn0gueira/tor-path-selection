@@ -35,7 +35,7 @@ public class Project2 {
 
     private static final Path CACHED_CONSENSUS = Cache.getCachePath("consensus");
     private static final Path CACHED_SV_DESCRIPTORS = Cache.getCachePath("sv_descriptors");
-    private static final String DEFAULT_TRAFFIC = "example/traffic";
+    private static final String DEFAULT_TRAFFIC = "example/IPAddresses.txt";
 
     public static void main(String[] args) throws IOException {
         // Very simple arg parser
@@ -58,14 +58,9 @@ public class Project2 {
 
         String trafficFile = argMap.getOrDefault("--traffic", DEFAULT_TRAFFIC);
 
-        System.out.println("Welcome to the Circuit Simulator!");
-
-        ServerDescriptorParser serverDescriptorParser = new ServerDescriptorParser(serverDescriptorsFile);
-        Map<String, Set<String>> nodeFamilies = serverDescriptorParser.parseServerDescriptors();
-        ConsensusParser consensusParser = new ConsensusParser(consensusFile);
-        List<Node> nodes = consensusParser.parseConsensus(nodeFamilies);
-        TrafficParser trafficParser = new TrafficParser(trafficFile);
-        List<Integer> ports = trafficParser.parseTrafficFile();
+        Map<String, Set<String>> nodeFamilies = new ServerDescriptorParser(serverDescriptorsFile).parseServerDescriptors();
+        List<Node> nodes = new ConsensusParser(consensusFile).parseConsensus(nodeFamilies);
+        List<Integer> ports = new TrafficParser(trafficFile).parseTrafficFile();
 
         String mode = argMap.getOrDefault("--mode", "both"); // tor | weighted | both
         int runs = Integer.parseInt(argMap.getOrDefault("--runs", "1"));
@@ -75,16 +70,16 @@ public class Project2 {
         if (mode.equals("tor") || mode.equals("both")) {
             PathSelection torPathSelection = new TorPathSelection(nodes);
             System.out.println("Running TorPathSelection metrics...");
-            runMetrics("TorPathSelection", torPathSelection, ports, runs);
+            runMetrics(torPathSelection, ports, runs);
         }
         if (mode.equals("weighted") || mode.equals("both")) {
             PathSelection weightedPathSelection = new WeightedPathSelection(nodes, alpha, beta);
             System.out.println("Running WeightedPathSelection metrics (alpha=" + alpha + ", beta=" + beta + ")...");
-            runMetrics("WeightedPathSelection", weightedPathSelection, ports, runs);
+            runMetrics(weightedPathSelection, ports, runs);
         }
     }
 
-    private static void runMetrics(String name, PathSelection ps, List<Integer> ports, int runs) {
+    private static void runMetrics(PathSelection ps, List<Integer> ports, int runs) {
 
         List<Integer> minBws = new ArrayList<>(ports.size() * runs);
 
@@ -93,14 +88,11 @@ public class Project2 {
         Map<String, Integer> middleCounts = new HashMap<>();
         Map<String, Integer> exitCounts = new HashMap<>();
 
-        int nmCircuits = 0; // number of successfully built circuits
-
         for (int r = 0; r < runs; r++) {
             for (int i = 0; i < ports.size(); i++) {
                 int port = ports.get(i);
                 System.out.printf("Port (%d) (%d/%d)...\r", port, i + 1, ports.size());
                 Circuit c = ps.buildCircuit(port);
-                nmCircuits++;
                 minBws.add(c.getMinBandwidth());
                 Node[] nodesArr = c.getNodes();
                 if (nodesArr != null) {
@@ -122,11 +114,6 @@ public class Project2 {
             }
         }
 
-        if (nmCircuits == 0) {
-            System.out.println(name + ": no successful circuits generated.");
-            return;
-        }
-
         double avg = minBws.stream().mapToInt(Integer::intValue).average().orElse(0.0);
         int min = minBws.stream().mapToInt(Integer::intValue).min().orElse(0);
         int max = minBws.stream().mapToInt(Integer::intValue).max().orElse(0);
@@ -138,13 +125,14 @@ public class Project2 {
         else
             median = minBws.get(mid);
 
-        double globalEntropy = computeShannonEntropy(globalCounts, nmCircuits * 3);
-        double guardEntropy = computeShannonEntropy(guardCounts, nmCircuits);
-        double middleEntropy = computeShannonEntropy(middleCounts, nmCircuits);
-        double exitEntropy = computeShannonEntropy(exitCounts, nmCircuits);
+        int totalCircuits = runs * ports.size();
+        double globalEntropy = computeShannonEntropy(globalCounts, totalCircuits * 3);
+        double guardEntropy = computeShannonEntropy(guardCounts, totalCircuits);
+        double middleEntropy = computeShannonEntropy(middleCounts, totalCircuits);
+        double exitEntropy = computeShannonEntropy(exitCounts, totalCircuits);
 
-        System.out.println("--- Metrics for " + name + " ---");
-        System.out.println("Runs: " + runs + ", Ports tested: " + ports.size() + ", Total circuits: " + nmCircuits);
+        System.out.println("--- Metrics for " + ps.getClass().getSimpleName() + " ---");
+        System.out.println("Runs: " + runs + ", Ports tested: " + ports.size() + ", Total circuits: " + totalCircuits);
         System.out.println("Unique nodes chosen (total): " + globalCounts.size());
         System.out.println("Unique per-position: guards=" + guardCounts.size() + ", middle=" + middleCounts.size()
                 + ", exit=" + exitCounts.size());
