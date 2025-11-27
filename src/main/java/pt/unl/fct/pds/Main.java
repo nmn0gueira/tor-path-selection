@@ -25,7 +25,7 @@ import static pt.unl.fct.pds.utils.NetworkUtils.download;
  * Application for Tor Path Selection alternatives.
  *
  */
-public class Project2 {
+public class Main {
     private static final String[] knownDirectoryAuthorities = new String[] {
             "217.196.147.77",
             "171.25.193.9:443",
@@ -82,16 +82,23 @@ public class Project2 {
     private static void runMetrics(PathSelection ps, List<Integer> ports, int runs) {
 
         List<Integer> minBws = new ArrayList<>(ports.size() * runs);
+        int totalCircuits = runs * ports.size();
 
-        Map<String, Integer> globalCounts = new HashMap<>();
-        Map<String, Integer> guardCounts = new HashMap<>();
-        Map<String, Integer> middleCounts = new HashMap<>();
-        Map<String, Integer> exitCounts = new HashMap<>();
+        Map<String, Integer> globalNodeCounts = new HashMap<>();
+        Map<String, Integer> guardNodeCounts = new HashMap<>();
+        Map<String, Integer> middleNodeCounts = new HashMap<>();
+        Map<String, Integer> exitNodeCounts = new HashMap<>();
+
+        Map<String, Integer> globalCountryCounts = new HashMap<>();
+        Map<String, Integer> guardCountryCounts = new HashMap<>();
+        Map<String, Integer> middleCountryCounts = new HashMap<>();
+        Map<String, Integer> exitCountryCounts = new HashMap<>();
 
         for (int r = 0; r < runs; r++) {
+            int innerLoopStart = r * ports.size();
             for (int i = 0; i < ports.size(); i++) {
                 int port = ports.get(i);
-                System.out.printf("Port (%d) (%d/%d)...\r", port, i + 1, ports.size());
+                System.out.printf("Port (%d) (%d/%d)...\r", port, innerLoopStart + i + 1, totalCircuits);
                 Circuit c = ps.buildCircuit(port);
                 minBws.add(c.getMinBandwidth());
                 Node[] nodesArr = c.getNodes();
@@ -101,13 +108,18 @@ public class Project2 {
                         if (n == null || n.getFingerprint() == null)
                             continue;
                         String fp = n.getFingerprint();
-                        globalCounts.put(fp, globalCounts.getOrDefault(fp, 0) + 1);
+                        String country = n.getCountry();
+                        globalNodeCounts.put(fp, globalNodeCounts.getOrDefault(fp, 0) + 1);
+                        globalCountryCounts.put(country, globalCountryCounts.getOrDefault(country, 0) + 1);
                         if (pos == 0) {
-                            guardCounts.put(fp, guardCounts.getOrDefault(fp, 0) + 1);
+                            guardNodeCounts.put(fp, guardNodeCounts.getOrDefault(fp, 0) + 1);
+                            guardCountryCounts.put(country, guardCountryCounts.getOrDefault(fp, 0) + 1);
                         } else if (pos == 1) {
-                            middleCounts.put(fp, middleCounts.getOrDefault(fp, 0) + 1);
+                            middleNodeCounts.put(fp, middleNodeCounts.getOrDefault(fp, 0) + 1);
+                            middleCountryCounts.put(country, middleCountryCounts.getOrDefault(country, 0) + 1);
                         } else if (pos == 2) {
-                            exitCounts.put(fp, exitCounts.getOrDefault(fp, 0) + 1);
+                            exitNodeCounts.put(fp, exitNodeCounts.getOrDefault(fp, 0) + 1);
+                            exitCountryCounts.put(country, exitCountryCounts.getOrDefault(country, 0) + 1);
                         }
                     }
                 }
@@ -125,22 +137,34 @@ public class Project2 {
         else
             median = minBws.get(mid);
 
-        int totalCircuits = runs * ports.size();
-        double globalEntropy = computeShannonEntropy(globalCounts, totalCircuits * 3);
-        double guardEntropy = computeShannonEntropy(guardCounts, totalCircuits);
-        double middleEntropy = computeShannonEntropy(middleCounts, totalCircuits);
-        double exitEntropy = computeShannonEntropy(exitCounts, totalCircuits);
+        int tenthPercentile = minBws.get(minBws.size() / 10);
+
+        double globalNodeEntropy = computeShannonEntropy(globalNodeCounts, totalCircuits * 3);
+        double guardNodeEntropy = computeShannonEntropy(guardNodeCounts, totalCircuits);
+        double middleNodeEntropy = computeShannonEntropy(middleNodeCounts, totalCircuits);
+        double exitNodeEntropy = computeShannonEntropy(exitNodeCounts, totalCircuits);
+
+        double globalCountryEntropy = computeShannonEntropy(globalCountryCounts, totalCircuits * 3);
+        double guardCountryEntropy = computeShannonEntropy(guardCountryCounts, totalCircuits);
+        double middleCountryEntropy = computeShannonEntropy(middleCountryCounts, totalCircuits);
+        double exitCountryEntropy = computeShannonEntropy(exitCountryCounts, totalCircuits);
 
         System.out.println("--- Metrics for " + ps.getClass().getSimpleName() + " ---");
         System.out.println("Runs: " + runs + ", Ports tested: " + ports.size() + ", Total circuits: " + totalCircuits);
-        System.out.println("Unique nodes chosen (total): " + globalCounts.size());
-        System.out.println("Unique per-position: guards=" + guardCounts.size() + ", middle=" + middleCounts.size()
-                + ", exit=" + exitCounts.size());
-        System.out.printf("Shannon Entropy (global): %.6f\n", globalEntropy);
-        System.out.printf("Shannon Entropy (guard/middle/exit): %.6f / %.6f / %.6f\n", guardEntropy, middleEntropy,
-                exitEntropy);
-        System.out.println("MinBW avg: " + String.format("%.2f", avg) + " (min=" + min + ", max=" + max + ", median="
-                + median + ")");
+        System.out.println("Unique nodes chosen (total): " + globalNodeCounts.size());
+        System.out.println("Unique nodes per-position: guards=" + guardNodeCounts.size() + ", middle=" + middleNodeCounts.size()
+                + ", exit=" + exitNodeCounts.size());
+        System.out.println("Unique countries chosen (total): " + globalCountryCounts.size());
+        System.out.println("Unique countries per-position: guards=" + guardCountryCounts.size() + ", middle=" + middleCountryCounts.size()
+                + ", exit=" + exitCountryCounts.size());
+        System.out.printf("(Node) Shannon Entropy (global): %.6f\n", globalNodeEntropy);
+        System.out.printf("(Node) Shannon Entropy (guard/middle/exit): %.6f / %.6f / %.6f\n", guardNodeEntropy, middleNodeEntropy,
+                exitNodeEntropy);
+        System.out.printf("(Country) Shannon Entropy (global): %.6f\n", globalCountryEntropy);
+        System.out.printf("(Country) Shannon Entropy (guard/middle/exit): %.6f / %.6f / %.6f\n", guardCountryEntropy, middleCountryEntropy,
+                exitCountryEntropy);
+        System.out.println("Minimum bandwidth average: " + String.format("%.2f", avg) + " (min=" + min + ", max=" + max + ", median="
+                + median + ", 10th%= " + tenthPercentile  + ")");
         System.out.println();
     }
 
