@@ -1,5 +1,6 @@
 package pt.unl.fct.pds;
 
+import junit.framework.AssertionFailedError;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
@@ -10,14 +11,13 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 import org.tukaani.xz.XZInputStream;
 import pt.unl.fct.pds.path.PathSelection;
 import pt.unl.fct.pds.path.TorPathSelection;
 import pt.unl.fct.pds.path.WeightedPathSelection;
+import pt.unl.fct.pds.path.guard.GuardSetStore;
 
 /**
  * Unit test for simple App.
@@ -25,6 +25,22 @@ import pt.unl.fct.pds.path.WeightedPathSelection;
 public class PathSelectionTest
     extends TestCase
 {
+
+    static class TestGuardSetStore implements GuardSetStore {
+        private final Node[] guardSet;
+        public TestGuardSetStore(Node[] guardSet) {
+            this.guardSet = guardSet;
+        }
+
+        public TestGuardSetStore(List<Node> nodes) {
+            this.guardSet = GuardSetStore.createGuardSet(nodes);
+        }
+
+        @Override
+        public Node[] getGuardSet() {
+            return guardSet;
+        }
+    }
 
     private static final List<Node> resourceNodes;
 
@@ -70,12 +86,14 @@ public class PathSelectionTest
     }
 
 
-    private void assertCircuit(Circuit circuit, int port) {
+    private void assertCircuit(Circuit circuit, int port, Set<Node> guardSet) {
         assertNotNull(circuit);
         Node[] circuitNodes = circuit.getNodes();
         Node guardNode = circuitNodes[0];
         Node middleNode = circuitNodes[1];
         Node exitNode = circuitNodes[circuitNodes.length - 1];
+
+        assertGuardInGuardSet(guardNode, guardSet);
         assertExitPolicy(exitNode, port);
 
         assertExitFlags(exitNode);
@@ -87,7 +105,9 @@ public class PathSelectionTest
         assertNotSame16Subnet(circuitNodes);
     }
 
-    // TODO: Missing unit tests for guard set
+    private void assertGuardInGuardSet(Node guard, Set<Node> guardSet) {
+        assertTrue(guardSet.contains(guard));
+    }
 
     private void assertAllDifferent(Node[] nodes) {
         assertNotNull(nodes);
@@ -122,7 +142,13 @@ public class PathSelectionTest
         assertNotNull(nodes);
         for (int i = 0; i < nodes.length - 1; i++) {
             for (int j = i + 1; j < nodes.length; j++) {
-                assertFalse(nodes[i].isInSameFamily(nodes[j]));
+                try {
+                    assertFalse(nodes[i].isInSameFamily(nodes[j]));
+                } catch (AssertionFailedError e) {
+                    System.out.println("Node " + nodes[i] + " is in same family");
+                    System.out.println("Node " + nodes[j] + " is in same family");
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
@@ -136,23 +162,26 @@ public class PathSelectionTest
         }
     }
 
-    private void testPathSelection(PathSelection pathSelection) {
+    private void testPathSelection(PathSelection pathSelection, Node[] guardSet) {
         List<Integer> ports = new ArrayList<>(65535);
         for (int i = 0; i < 65535; i++) {
             ports.add(i);
         }
+        Set<Node> guardHashSet = new HashSet<>(Arrays.asList(guardSet));
         ports.parallelStream()
-                .forEach(port -> assertCircuit(pathSelection.buildCircuit(port), port));
+                .forEach(port -> assertCircuit(pathSelection.buildCircuit(port), port, guardHashSet));
     }
 
     public void testTorPathSelection() {
-        PathSelection torPathSelection = new TorPathSelection(resourceNodes);
-        testPathSelection(torPathSelection);
+        GuardSetStore guardSetStore = new TestGuardSetStore(resourceNodes);
+        PathSelection torPathSelection = new TorPathSelection(resourceNodes, guardSetStore);
+        testPathSelection(torPathSelection, guardSetStore.getGuardSet());
 
     }
 
     public void testWeightedPathSelection() {
-        PathSelection weightedPathSelection = new WeightedPathSelection(resourceNodes, 0.5, 0.5);
-        testPathSelection(weightedPathSelection);
+        GuardSetStore guardSetStore = new TestGuardSetStore(resourceNodes);
+        PathSelection weightedPathSelection = new WeightedPathSelection(resourceNodes, guardSetStore, 0.5, 0.5);
+        testPathSelection(weightedPathSelection, guardSetStore.getGuardSet());
     }
 }

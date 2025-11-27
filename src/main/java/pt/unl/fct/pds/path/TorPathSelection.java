@@ -1,11 +1,17 @@
 package pt.unl.fct.pds.path;
 
 import pt.unl.fct.pds.model.Node;
+import pt.unl.fct.pds.path.guard.GuardSetStore;
 import pt.unl.fct.pds.utils.RandomCollection;
 
 import java.util.List;
 
 public class TorPathSelection extends AbstractPathSelection{
+
+    public TorPathSelection(List<Node> nodes, GuardSetStore guardSetStore) {
+        super(nodes, guardSetStore);
+        id = 1;
+    }
 
     public TorPathSelection(List<Node> nodes) {
         super(nodes);

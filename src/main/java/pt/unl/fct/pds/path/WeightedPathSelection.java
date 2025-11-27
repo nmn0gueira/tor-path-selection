@@ -1,6 +1,7 @@
 package pt.unl.fct.pds.path;
 
 import pt.unl.fct.pds.model.Node;
+import pt.unl.fct.pds.path.guard.GuardSetStore;
 import pt.unl.fct.pds.utils.RandomCollection;
 
 import java.util.List;
@@ -12,6 +13,13 @@ public class WeightedPathSelection extends AbstractPathSelection {
 
     public WeightedPathSelection(List<Node> nodes, double alpha, double beta) {
         super(nodes);
+        id = 2;
+        this.alpha = alpha;
+        this.beta = beta;
+    }
+
+    public WeightedPathSelection(List<Node> nodes, GuardSetStore guardSetStore, double alpha, double beta) {
+        super(nodes, guardSetStore);
         id = 2;
         this.alpha = alpha;
         this.beta = beta;
